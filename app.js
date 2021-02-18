@@ -7,8 +7,11 @@ const User = require("./models/userDB.js");
 const passport = require('passport');
 const session = require('express-session');
 const passportLocalMongoose = require("passport-local-mongoose")
-
+const GoogleStrategy = require('passport-google-oauth20').Strategy;
+const { compareSync } = require('bcrypt');
 const app = express();
+
+
 app.use(express.static("public"));
 app.set('view engine', 'ejs')
 app.use(bodyParser.urlencoded({
@@ -27,7 +30,19 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
- 
+//Google Strategy config
+passport.use(new GoogleStrategy({
+    clientID: process.env.CLIENT_ID,
+    clientSecret: process.env.CLIENT_SECRET,
+    callbackURL: "http://localhost:3000/auth/google/secrets"
+  },
+  function(accessToken, refreshToken, profile, cb) {
+      User.findOrCreate({ googleId: profile.id }, function (err, user) {
+          return cb(err, user);
+    });
+  }
+));
+
 // mongoose deprecation warnings
 mongoose.set('useNewUrlParser', true);
 mongoose.set('useFindAndModify', false);
@@ -59,7 +74,13 @@ app.get('/register', function(req, res){
         res.render('register')
     }
 });
-
+app.get('/login-incorrect', function(req, res){
+    if (req.isAuthenticated()){
+        res.render('secrets')
+    } else {
+        res.render("login_!auth")
+    }
+});
 app.get('/login', function(req, res){
     if (req.isAuthenticated()){
         res.render('secrets')
@@ -68,18 +89,43 @@ app.get('/login', function(req, res){
     }
 });
 
-app.get("/secrets", (req, res)=>{
+
+app.get('/submit', function(req, res){
     if (req.isAuthenticated()){
-        res.render('secrets')
+        res.render('submit')
     } else {
-        res.send("not authenticated")
- //       res.redirect('/login')
+        res.render("login")
     }
+});
+
+app.get("/secrets", (req, res)=>{
+    User.find({"secrets" : {$ne:null}}, function(err, foundUser){
+        if (err){
+            console.log(err)
+        } else {
+            if (foundUser){
+                console.log(foundUser)
+                res.render("secrets", {userSecrets : foundUser});
+            }
+        }
+    })
 })
 
 app.get('/logout', function(req, res){
     req.logout();
     res.redirect('/');
+  });
+
+
+app.get('/auth/google',
+  passport.authenticate('google', { scope: ['profile'] })
+  );
+
+app.get('/auth/google/secrets', 
+  passport.authenticate('google', { failureRedirect: '/login' }),
+  function(req, res) {
+    // Successful authentication, redirect secret.
+    res.redirect('/secrets');
   });
 
 app.post('/register', function(req, res){
@@ -99,10 +145,21 @@ app.post('/register', function(req, res){
 
 app.post('/login',
   passport.authenticate('local', { successRedirect: '/secrets',
-                                   failureRedirect: '/login'
+                                   failureRedirect: '/login-incorrect'
                                 })
 );
 
+app.post('/submit', function(req, res){
+    const secret = req.body.secret;
+    console.log(req.user)
+    User.findByIdAndUpdate(req.user._id, {"secrets" : secret}, function(err){
+        if (err){
+            console.log(err)
+        } else {
+            res.redirect('secrets')
+        }
+    })
+})
 
 app.listen(3000, function(){
     console.log("server listening on port 3000")

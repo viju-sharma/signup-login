@@ -1,14 +1,16 @@
 <%- include('partials/header') %>
+
 <div class="container mt-5">
-  <h1>Register</h1>
+  <p>username and password does not matched !! <br> try Again please!!</p>
+  <h1>Login</h1>
 
   <div class="row">
     <div class="col-sm-8">
       <div class="card">
         <div class="card-body">
 
-          <!-- Makes POST request to /register route -->
-          <form action="/register" method="POST">
+          <!-- Makes POST request to /login route -->
+          <form action="/login" method="POST">
             <div class="form-group">
               <label for="email">Email</label>
               <input type="email" class="form-control" name="username">
@@ -17,7 +19,7 @@
               <label for="password">Password</label>
               <input type="password" class="form-control" name="password">
             </div>
-            <button type="submit" class="btn btn-dark">Register</button>
+            <button type="submit" class="btn btn-dark">Login</button>
           </form>
 
         </div>
@@ -25,11 +27,11 @@
     </div>
 
     <div class="col-sm-4">
-      <div class="card social-block">
+      <div class="card">
         <div class="card-body">
-          <a class="btn btn-block btn-google btn-social" href="/auth/google" role="button">
+          <a class="btn btn-block" href="/auth/google" role="button">
             <i class="fab fa-google"></i>
-            Sign Up with Google
+            Sign In with Google
           </a>
         </div>
       </div>
@@ -38,4 +40,4 @@
   </div>
 </div>
 
-<%- include('partials/header') %>
+<%- include('partials/footer') %>
