@@ -4,7 +4,8 @@ const ejs = require("ejs");
 const bodyParser = require('body-parser')
 const mongoose = require("mongoose");
 const User = require("./models/userDB.js");
-const md5 = require('md5');
+const bcrypt = require('bcrypt');
+const saltRounds = 10;
 
 const app = express();
 app.use(express.static("public"));
@@ -38,33 +39,47 @@ app.get('/login', function(req, res){
 });
 
 app.post('/register', function(req, res){
-    const newUser = new User({
-        email : req.body.username,
-        password : md5(req.body.password)
+    bcrypt.hash(req.body.password, saltRounds, function(err, hashpassword){
+        const newUser = new User({
+            email : req.body.username,
+            password : hashpassword
+        })
+        newUser.save(function(err){
+            if (err){
+                console.log(err)
+            } else {
+                res.render("secrets")
+            }
+        })      
     })
-    newUser.save(function(err){
-        if (err){
-            console.log(err)
-        } else {
-            res.render("secrets")
-        }
-    })
+    
 })
 app.post('/login', function(req, res){
     const username = req.body.username;
-    const password = md5(req.body.password);
+    const password = req.body.password;
+    
     User.findOne({email : username}, function(err, founduser){
         if (err){
             console.log(err)
         } else {
             if (founduser){
-                if (founduser.password===password){
-                    res.render("secrets")
-                } else {
-                    res.send("User Not Found")
-                }
+                let hashpassword = founduser.password
+                bcrypt.compare(password, hashpassword, function(err, result) {
+                    if (err){
+                        console.log(err)
+                    } else {
+                        if(result){
+                            res.render('secrets')
+                        } else{
+                            res.send("incorrect password")
+                        }
+                    }
+                });
+            } else {
+                res.send("data not found for the given username")
             }
         }
+        
     })
 })
 
